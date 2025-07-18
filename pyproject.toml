@@ -1,7 +1,27 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
+requires = ["setuptools>=42", "wheel", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "go-polars"
+version = "0.1.0"
+description = "A high-performance DataFrame library for Python powered by Go"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+dependencies = [
     "numpy>=1.20.0",
 ]
-build-backend = "setuptools.build_meta" 
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Go",
+] 
