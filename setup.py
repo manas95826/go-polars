@@ -5,16 +5,35 @@ import shutil
 import numpy as np
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
+from wheel.bdist_wheel import bdist_wheel
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
+class CustomBdistWheel(bdist_wheel):
+    def finalize_options(self):
+        bdist_wheel.finalize_options(self)
+        # Force the platform tag to be macosx_11_0_arm64
+        if sys.platform == 'darwin':
+            self.plat_name = "macosx_11_0_arm64"
+
 class CustomBuildExt(build_ext):
+    def build_extension(self, ext):
+        if sys.platform == 'darwin':
+            ext.extra_compile_args = ['-mmacosx-version-min=11.0']
+            ext.extra_link_args = ['-mmacosx-version-min=11.0']
+        super().build_extension(ext)
+
     def run(self):
         # Build the Go shared library
         print("Building Go shared library...")
         if sys.platform == 'darwin':
-            os.environ['CGO_CFLAGS'] = '-Wno-undef-prefix'
-        subprocess.check_call(['go', 'build', '-buildmode=c-shared', '-o', 'libgo_polars.so', './bridge/bridge.go'])
+            os.environ['CGO_ENABLED'] = '1'
+            os.environ['GOOS'] = 'darwin'
+            os.environ['GOARCH'] = 'arm64'
+            os.environ['CGO_CFLAGS'] = '-mmacosx-version-min=11.0'
+            os.environ['CGO_LDFLAGS'] = '-mmacosx-version-min=11.0'
+        subprocess.check_call(['go', 'build', '-buildmode=c-shared',
+                             '-o', 'libgo_polars.so', './bridge/bridge.go'])
         
         # Create the package directory and copy the shared library
         os.makedirs('go_polars', exist_ok=True)
@@ -50,7 +69,10 @@ setup(
         runtime_library_dirs=[os.path.join(current_dir, 'go_polars')] if sys.platform != 'darwin' else None,
         extra_link_args=['-Wl,-rpath,' + os.path.join(current_dir, 'go_polars')] if sys.platform != 'darwin' else None,
     )],
-    cmdclass={'build_ext': CustomBuildExt},
+    cmdclass={
+        'build_ext': CustomBuildExt,
+        'bdist_wheel': CustomBdistWheel,
+    },
     install_requires=['numpy>=1.20.0'],
     python_requires='>=3.7',
     classifiers=[
