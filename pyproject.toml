@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "go-polars"
-version = "0.1.1"
+version = "0.1.13"
 description = "A high-performance DataFrame library for Python powered by Go"
 readme = "README.md"
 requires-python = ">=3.7"

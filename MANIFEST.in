@@ -4,4 +4,6 @@ include bridge/*.go
 include bridge/go.mod
 include go_polars/*.h
 include go_polars/*.so
+include go_polars/*.dylib
+include go_polars/*.dll
 include go_polars/*.c 

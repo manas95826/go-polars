@@ -3,11 +3,19 @@
 #include "numpy/arrayobject.h"
 #include <stdint.h>
 
-// Function declarations from Go
-int64_t NewDataFrame(void);
-int AddSeries(int64_t handle, const char* name, void* data, int length, int dtype);
-int GetShape(int64_t handle, int* rows, int* cols);
-void DeleteDataFrame(int64_t handle);
+#ifdef __APPLE__
+    #define LIB_NAME "libgo_polars.dylib"
+#elif _WIN32
+    #define LIB_NAME "go_polars.dll"
+#else
+    #define LIB_NAME "libgo_polars.so"
+#endif
+
+// Function declarations from Go - no underscore prefix
+extern int64_t NewDataFrame(void);
+extern int AddSeries(int64_t handle, const char* name, void* data, int length, int dtype);
+extern int GetShape(int64_t handle, int* rows, int* cols);
+extern void DeleteDataFrame(int64_t handle);
 
 typedef struct {
     PyObject_HEAD

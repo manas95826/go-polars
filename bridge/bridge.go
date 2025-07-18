@@ -1,7 +1,15 @@
 package main
 
-// #include <stdlib.h>
-// #include <stdint.h>
+/*
+#include <stdlib.h>
+#include <stdint.h>
+
+// Export these symbols without underscore prefix
+int64_t NewDataFrame(void);
+int AddSeries(int64_t handle, char* name, void* data, int length, int dtype);
+int GetShape(int64_t handle, int* rows, int* cols);
+void DeleteDataFrame(int64_t handle);
+*/
 import "C"
 import (
 	"fmt"
@@ -84,8 +92,8 @@ type Handle struct {
 	df     *DataFrame
 }
 
-var handles = make(map[C.int64_t]*Handle)
-var nextHandle C.int64_t = 1
+var handles = make(map[int64]*Handle)
+var nextHandle int64 = 1
 
 //export NewDataFrame
 func NewDataFrame() C.int64_t {
@@ -100,12 +108,12 @@ func NewDataFrame() C.int64_t {
 		df:     df,
 		series: make(map[string]*Series),
 	}
-	return handle
+	return C.int64_t(handle)
 }
 
 //export AddSeries
 func AddSeries(handle C.int64_t, name *C.char, data unsafe.Pointer, length C.int, dtype C.int) C.int {
-	h, ok := handles[handle]
+	h, ok := handles[int64(handle)]
 	if !ok {
 		return -1
 	}
@@ -142,7 +150,7 @@ func AddSeries(handle C.int64_t, name *C.char, data unsafe.Pointer, length C.int
 
 //export GetShape
 func GetShape(handle C.int64_t, rows *C.int, cols *C.int) C.int {
-	h, ok := handles[handle]
+	h, ok := handles[int64(handle)]
 	if !ok {
 		return -1
 	}
@@ -155,7 +163,7 @@ func GetShape(handle C.int64_t, rows *C.int, cols *C.int) C.int {
 
 //export DeleteDataFrame
 func DeleteDataFrame(handle C.int64_t) {
-	delete(handles, handle)
+	delete(handles, int64(handle))
 }
 
 func main() {}

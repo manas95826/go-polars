@@ -30,7 +30,7 @@ jobs:
     - name: Build manylinux wheels
       uses: RalfG/python-wheels-manylinux-build@v0.7.1-manylinux2014_x86_64
       with:
-        python-versions: 'cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312'
+        python-versions: 'cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313'
         build-requirements: 'numpy'
         system-packages: 'golang'
         pre-build-command: 'go version'
@@ -43,7 +43,11 @@ jobs:
 
   build_macos_wheels:
     name: Build macOS wheels
-    runs-on: macos-14
+    strategy:
+      matrix:
+        os: [macos-14]
+        arch: [x86_64, arm64]
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
@@ -65,12 +69,69 @@ jobs:
         pip install build setuptools numpy
     
     - name: Build wheel
-      run: python -m build --wheel --no-isolation
+      env:
+        GOARCH: ${{ matrix.arch }}
+        MACOSX_DEPLOYMENT_TARGET: '11.0'
+      run: |
+        # Set environment for cross-compilation if needed
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          export CGO_ENABLED=1
+          export GOOS=darwin
+          export CGO_CFLAGS="-mmacosx-version-min=11.0"
+          export CGO_LDFLAGS="-mmacosx-version-min=11.0"
+        fi
+        python -m build --wheel --no-isolation
     
     - name: Store wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-macos
+        name: wheels-macos-${{ matrix.arch }}
+        path: dist/*.whl
+
+  build_windows_wheels:
+    name: Build Windows wheels
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: false
+    
+    - name: Set up MSVC
+      uses: microsoft/setup-msbuild@v1.3
+    
+    - name: Set up Windows SDK
+      uses: GuillaumeFalourd/setup-windows10-sdk-action@v1
+      with:
+        sdk-version: 19041
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip wheel
+        pip install build setuptools numpy
+    
+    - name: Build wheel
+      env:
+        CGO_ENABLED: 1
+      run: |
+        # Set up Visual Studio environment
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        python -m build --wheel --no-isolation
+      shell: cmd
+    
+    - name: Store wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-windows
         path: dist/*.whl
 
   build_sdist:
@@ -99,7 +160,7 @@ jobs:
         path: dist/*.tar.gz
 
   upload:
-    needs: [build_linux_wheels, build_macos_wheels, build_sdist]
+    needs: [build_linux_wheels, build_macos_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-22.04
     environment:
       name: pypi
@@ -114,10 +175,22 @@ jobs:
         name: wheels-linux
         path: dist/
     
-    - name: Download macOS wheels
+    - name: Download macOS x86_64 wheels
       uses: actions/download-artifact@v4
       with:
-        name: wheels-macos
+        name: wheels-macos-x86_64
+        path: dist/
+    
+    - name: Download macOS arm64 wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: wheels-macos-arm64
+        path: dist/
+    
+    - name: Download Windows wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: wheels-windows
         path: dist/
     
     - name: Download sdist
