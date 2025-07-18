@@ -9,13 +9,12 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/go-polars
-    permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v4
@@ -31,19 +30,68 @@ jobs:
         go-version: '1.21'
         cache: false
     
-    - name: Build Go library
-      run: |
-        cd bridge
-        CGO_ENABLED=1 go build -buildmode=c-shared -o libgo_polars.so bridge.go
-        cd ..
-    
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build numpy
+        pip install build wheel
     
-    - name: Build package
-      run: python -m build
+    - name: Build wheel
+      run: |
+        python -m build --wheel --no-isolation
+    
+    - name: Store wheel
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: dist/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+    
+    - name: Build sdist
+      run: python -m build --sdist --no-isolation
+    
+    - name: Store sdist
+      uses: actions/upload-artifact@v3
+      with:
+        name: sdist
+        path: dist/*.tar.gz
+
+  upload:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/go-polars
+    permissions:
+      id-token: write
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: dist
+    
+    - name: Move artifacts
+      run: |
+        mkdir -p dist_final
+        mv dist/*/*.whl dist_final/
+        mv dist/*/*.tar.gz dist_final/
     
     - name: Publish package
-      uses: pypa/gh-action-pypi-publish@release/v1 
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist_final/ 
