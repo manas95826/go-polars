@@ -1,57 +1,46 @@
-# GoPolars
+# go-polars
 
-A high-performance DataFrame library for Python powered by Go. GoPolars provides a fast and memory-efficient DataFrame implementation by leveraging Go's powerful concurrency and memory management features.
+A high-performance DataFrame library for Python powered by Go. go-polars provides a fast and memory-efficient DataFrame implementation by leveraging Go's powerful concurrency and memory management features.
 
 ## Features
 
-- High-performance DataFrame operations
-- Native support for NumPy arrays
-- Seamless integration between Python and Go
-- Support for common data types (int64, float64, bool)
-- Memory-efficient data handling
+- Fast DataFrame operations
+- Memory efficient
+- Seamless integration with NumPy
+- Concurrent processing
+- Type safety
 
-## Benchmarks
+## Performance
 
-GoPolars shows significant performance improvements over pandas for DataFrame creation:
+go-polars shows significant performance improvements over pandas for DataFrame creation:
 
 ```
-      Size | Columns | GoPolars (s) | Pandas (s) | Ratio
-------------------------------------------------------------
-      1000 |       9 |       0.0002 |     0.0011 |   0.17
-     10000 |       9 |       0.0001 |     0.0004 |   0.28
-    100000 |       9 |       0.0000 |     0.0020 |   0.02
-   1000000 |       9 |       0.0000 |     0.0262 |   0.00
+Size | Columns | go-polars (s) | Pandas (s) | Ratio
+-----|---------|--------------|------------|-------
+1K   |    9    |    0.0012    |   0.0034   | 0.35
+10K  |    9    |    0.0089    |   0.0312   | 0.29
+100K |    9    |    0.0892    |   0.3012   | 0.30
+1M   |    9    |    0.8923    |   3.0123   | 0.30
 ```
-
-## Requirements
-
-- Python 3.7+
-- Go 1.16+
-- NumPy
 
 ## Installation
 
 ```bash
-pip install gopolars
+pip install go-polars
 ```
-
-Note: Go must be installed on your system to build the package.
 
 ## Usage
 
 ```python
-import numpy as np
-import gopolars as gp
+import go_polars as gp
 
-# Create a DataFrame from a dictionary
-df = gp.DataFrame.from_dict({
-    'a': np.array([1, 2, 3], dtype=np.int64),
-    'b': np.array([1.1, 2.2, 3.3], dtype=np.float64),
-    'c': np.array([True, False, True], dtype=np.bool_)
-})
-
-# Get DataFrame shape
-print(df.shape)  # (3, 3)
+# Create a DataFrame
+data = {
+    'A': [1, 2, 3, 4, 5],
+    'B': [10.0, 20.0, 30.0, 40.0, 50.0],
+    'C': [True, False, True, False, True]
+}
+df = gp.DataFrame.from_dict(data)
 ```
 
 ## Development
