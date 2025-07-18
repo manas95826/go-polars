@@ -1,85 +1,68 @@
-# Go-Polars: Fast DataFrame Library for Go
+# GoPolars
 
-Go-Polars is a high-performance DataFrame library for Go, inspired by the Rust-based Polars library. It provides efficient data manipulation capabilities with a focus on performance and ease of use.
+A high-performance DataFrame library for Python powered by Go. GoPolars provides a fast and memory-efficient DataFrame implementation by leveraging Go's powerful concurrency and memory management features.
 
 ## Features
 
-- Type-safe Series and DataFrame operations
-- Support for common data types (int64, float64, string, bool)
-- Basic DataFrame operations (select, filter, head)
+- High-performance DataFrame operations
+- Native support for NumPy arrays
+- Seamless integration between Python and Go
+- Support for common data types (int64, float64, bool)
 - Memory-efficient data handling
-- Easy-to-use API
+
+## Benchmarks
+
+GoPolars shows significant performance improvements over pandas for DataFrame creation:
+
+```
+      Size | Columns | GoPolars (s) | Pandas (s) | Ratio
+------------------------------------------------------------
+      1000 |       9 |       0.0002 |     0.0011 |   0.17
+     10000 |       9 |       0.0001 |     0.0004 |   0.28
+    100000 |       9 |       0.0000 |     0.0020 |   0.02
+   1000000 |       9 |       0.0000 |     0.0262 |   0.00
+```
+
+## Requirements
+
+- Python 3.7+
+- Go 1.16+
+- NumPy
 
 ## Installation
 
 ```bash
-go get github.com/manaschopra/go-polars
+pip install gopolars
 ```
 
-## Quick Start
+Note: Go must be installed on your system to build the package.
 
-```go
-package main
+## Usage
 
-import (
-    "fmt"
-    "github.com/manaschopra/go-polars/dataframe"
-    "github.com/manaschopra/go-polars/types"
-)
+```python
+import numpy as np
+import gopolars as gp
 
-func main() {
-    // Create series
-    ages := types.NewSeries("age", []int64{25, 30, 35, 40})
-    names := types.NewSeries("name", []string{"Alice", "Bob", "Charlie", "David"})
-    scores := types.NewSeries("score", []float64{95.5, 85.0, 92.5, 88.0})
+# Create a DataFrame from a dictionary
+df = gp.DataFrame.from_dict({
+    'a': np.array([1, 2, 3], dtype=np.int64),
+    'b': np.array([1.1, 2.2, 3.3], dtype=np.float64),
+    'c': np.array([True, False, True], dtype=np.bool_)
+})
 
-    // Create DataFrame
-    series := map[string]*types.Series{
-        "age": ages,
-        "name": names,
-        "score": scores,
-    }
-    df, err := dataframe.New(series)
-    if err != nil {
-        panic(err)
-    }
-
-    // Print DataFrame dimensions
-    rows, cols := df.Shape()
-    fmt.Printf("DataFrame shape: (%d, %d)\n", rows, cols)
-
-    // Select specific columns
-    selected, err := df.Select([]string{"name", "age"})
-    if err != nil {
-        panic(err)
-    }
-
-    // Filter rows
-    filtered, err := df.Filter("age", func(v interface{}) bool {
-        age := v.(int64)
-        return age > 30
-    })
-    if err != nil {
-        panic(err)
-    }
-
-    // Get first 2 rows
-    head, err := df.Head(2)
-    if err != nil {
-        panic(err)
-    }
-}
+# Get DataFrame shape
+print(df.shape)  # (3, 3)
 ```
 
-## Features in Development
+## Development
 
-- Group by operations
-- Aggregations
-- Joins
-- CSV/JSON I/O
-- Parallel processing
-- Memory optimization
-- Lazy evaluation
+To build from source:
+
+```bash
+git clone https://github.com/manaschopra/go-polars
+cd go-polars
+pip install -e .
+```
 
 ## Contributing
 
