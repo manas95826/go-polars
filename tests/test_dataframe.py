@@ -1,10 +1,15 @@
 import numpy as np
+import go_polars as gp
 import pytest
-import gopolars as gp
 
 def test_create_dataframe():
-    df = gp.DataFrame()
-    assert df.shape == (0, 0)
+    data = {
+        'a': np.array([1, 2, 3], dtype=np.int64),
+        'b': np.array([1.1, 2.2, 3.3], dtype=np.float64),
+        'c': np.array([True, False, True], dtype=np.bool_)
+    }
+    df = gp.DataFrame.from_dict(data)
+    assert df.shape == (3, 3)
 
 def test_from_dict():
     data = {

@@ -96,17 +96,70 @@ DataFrame_shape(DataFrameObject *self, PyObject *Py_UNUSED(ignored))
     return Py_BuildValue("(ii)", rows, cols);
 }
 
+static PyObject *
+DataFrame_from_dict(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+    PyObject *data;
+    static char *kwlist[] = {"data", NULL};
+    
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &data)) {
+        return NULL;
+    }
+
+    if (!PyDict_Check(data)) {
+        PyErr_SetString(PyExc_TypeError, "Expected dictionary");
+        return NULL;
+    }
+
+    // Create new DataFrame
+    PyObject *df = DataFrame_new(type, NULL, NULL);
+    if (df == NULL) {
+        return NULL;
+    }
+
+    // Add each series
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+
+    while (PyDict_Next(data, &pos, &key, &value)) {
+        if (!PyUnicode_Check(key)) {
+            PyErr_SetString(PyExc_TypeError, "Dictionary keys must be strings");
+            Py_DECREF(df);
+            return NULL;
+        }
+
+        PyObject *args = Py_BuildValue("(OO)", key, value);
+        if (args == NULL) {
+            Py_DECREF(df);
+            return NULL;
+        }
+
+        PyObject *result = DataFrame_add_series((DataFrameObject *)df, args);
+        Py_DECREF(args);
+
+        if (result == NULL) {
+            Py_DECREF(df);
+            return NULL;
+        }
+        Py_DECREF(result);
+    }
+
+    return df;
+}
+
 static PyMethodDef DataFrame_methods[] = {
     {"add_series", (PyCFunction) DataFrame_add_series, METH_VARARGS,
      "Add a series to the DataFrame"},
     {"shape", (PyCFunction) DataFrame_shape, METH_NOARGS,
      "Get the shape of the DataFrame"},
+    {"from_dict", (PyCFunction) DataFrame_from_dict, METH_CLASS | METH_VARARGS | METH_KEYWORDS,
+     "Create DataFrame from dictionary"},
     {NULL}  /* Sentinel */
 };
 
 static PyTypeObject DataFrameType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "gopolars._gopolars.DataFrame",
+    .tp_name = "go_polars._go_polars.DataFrame",
     .tp_doc = "DataFrame object",
     .tp_basicsize = sizeof(DataFrameObject),
     .tp_itemsize = 0,
@@ -116,15 +169,15 @@ static PyTypeObject DataFrameType = {
     .tp_methods = DataFrame_methods,
 };
 
-static PyModuleDef gopolarsmodule = {
+static PyModuleDef go_polarsmodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "gopolars._gopolars",
+    .m_name = "go_polars._go_polars",
     .m_doc = "Python interface for go-polars.",
     .m_size = -1,
 };
 
 PyMODINIT_FUNC
-PyInit__gopolars(void)
+PyInit__go_polars(void)
 {
     import_array();  // Initialize NumPy
 
@@ -132,7 +185,7 @@ PyInit__gopolars(void)
     if (PyType_Ready(&DataFrameType) < 0)
         return NULL;
 
-    m = PyModule_Create(&gopolarsmodule);
+    m = PyModule_Create(&go_polarsmodule);
     if (m == NULL)
         return NULL;
 
