@@ -9,12 +9,41 @@ permissions:
   contents: read
 
 jobs:
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, macos-14]
+  build_linux_wheels:
+    name: Build Linux wheels
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: false
+    
+    - name: Build manylinux wheels
+      uses: RalfG/python-wheels-manylinux-build@v0.7.1-manylinux2014_x86_64
+      with:
+        python-versions: 'cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313'
+        build-requirements: 'numpy'
+        system-packages: 'golang'
+        pre-build-command: 'go version'
+
+    - name: Store wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-linux
+        path: dist/*-manylinux*.whl
+
+  build_macos_wheels:
+    name: Build macOS wheels
+    runs-on: macos-14
 
     steps:
     - uses: actions/checkout@v4
@@ -32,34 +61,17 @@ jobs:
     
     - name: Install build dependencies
       run: |
-        python -m pip install --upgrade pip wheel setuptools numpy auditwheel
-        if [ "${{ matrix.os }}" = "ubuntu-22.04" ]; then
-          sudo apt-get update
-          sudo apt-get install -y patchelf
-        fi
+        python -m pip install --upgrade pip wheel
+        pip install build setuptools numpy
     
     - name: Build wheel
       run: python -m build --wheel --no-isolation
     
-    - name: Repair wheel (Linux)
-      if: matrix.os == 'ubuntu-22.04'
-      run: |
-        mkdir -p wheelhouse
-        for whl in dist/*.whl; do
-          auditwheel repair "$whl" -w wheelhouse/
-        done
-    
-    - name: Copy wheel (macOS)
-      if: matrix.os == 'macos-14'
-      run: |
-        mkdir -p wheelhouse
-        cp dist/*.whl wheelhouse/
-    
     - name: Store wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.os }}
-        path: wheelhouse/*.whl
+        name: wheels-macos
+        path: dist/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -87,7 +99,7 @@ jobs:
         path: dist/*.tar.gz
 
   upload:
-    needs: [build_wheels, build_sdist]
+    needs: [build_linux_wheels, build_macos_wheels, build_sdist]
     runs-on: ubuntu-22.04
     environment:
       name: pypi
@@ -96,18 +108,23 @@ jobs:
       id-token: write
 
     steps:
-    - name: Download artifacts
+    - name: Download Linux wheels
       uses: actions/download-artifact@v4
       with:
-        path: dist
-        pattern: wheels-*
-        merge-multiple: true
+        name: wheels-linux
+        path: dist/
+    
+    - name: Download macOS wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: wheels-macos
+        path: dist/
     
     - name: Download sdist
       uses: actions/download-artifact@v4
       with:
         name: sdist
-        path: dist
+        path: dist/
     
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
