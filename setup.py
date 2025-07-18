@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
+import platform
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -23,6 +24,21 @@ class CustomBuildExt(build_ext):
         
         # Build the Python extension
         build_ext.run(self)
+
+    def get_ext_filename(self, ext_name):
+        # Override to ensure correct platform tag
+        filename = super().get_ext_filename(ext_name)
+        if sys.platform == 'linux':
+            # Use manylinux tag for Linux
+            suffix = '.so'
+            if platform.machine() == 'x86_64':
+                platform_tag = 'manylinux2014_x86_64'
+            elif platform.machine() == 'aarch64':
+                platform_tag = 'manylinux2014_aarch64'
+            else:
+                platform_tag = platform.machine()
+            filename = filename.replace('linux_', f'{platform_tag}.')
+        return filename
 
 # Read the contents of README.md
 with open('README.md', 'r', encoding='utf-8') as f:
@@ -56,7 +72,6 @@ setup(
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
