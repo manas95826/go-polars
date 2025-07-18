@@ -125,7 +125,13 @@ jobs:
       with:
         name: sdist
         path: dist/
-    
+
+    - name: Remove unsupported linux_x86_64 wheels
+      run: |
+        # Delete wheels that do not have a manylinux or musllinux tag
+        echo "Cleaning dist directory before upload..."
+        find dist -name '*linux_x86_64.whl' ! -name '*manylinux*' ! -name '*musllinux*' -print -delete
+
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
