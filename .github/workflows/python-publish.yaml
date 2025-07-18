@@ -14,18 +14,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-22.04, macos-14]  # Using specific versions instead of latest
 
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
     
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '1.21'
         cache: false
@@ -40,19 +40,19 @@ jobs:
         python -m build --wheel --no-isolation
     
     - name: Store wheel
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.os }}
         path: dist/*.whl
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
     
@@ -65,14 +65,14 @@ jobs:
       run: python -m build --sdist --no-isolation
     
     - name: Store sdist
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: sdist
         path: dist/*.tar.gz
 
   upload:
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment:
       name: pypi
       url: https://pypi.org/p/go-polars
@@ -81,17 +81,19 @@ jobs:
 
     steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: dist
+        pattern: wheels-*
+        merge-multiple: true
     
-    - name: Move artifacts
-      run: |
-        mkdir -p dist_final
-        mv dist/*/*.whl dist_final/
-        mv dist/*/*.tar.gz dist_final/
+    - name: Download sdist
+      uses: actions/download-artifact@v4
+      with:
+        name: sdist
+        path: dist
     
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        packages-dir: dist_final/ 
+        packages-dir: dist/ 
