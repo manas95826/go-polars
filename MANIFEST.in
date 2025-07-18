@@ -1,7 +1,7 @@
 include LICENSE
 include README.md
 include bridge/*.go
-include bridge/*.h
+include bridge/go.mod
 include go_polars/*.h
 include go_polars/*.so
 include go_polars/*.c 
