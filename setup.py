@@ -133,7 +133,7 @@ else:
 
 setup(
     name='go-polars',
-    version='0.1.13',
+    version='1.0.0',
     description='A high-performance DataFrame library for Python powered by Go',
     long_description=long_description,
     long_description_content_type='text/markdown',

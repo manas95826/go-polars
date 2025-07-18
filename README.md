@@ -48,7 +48,7 @@ df = gp.DataFrame.from_dict(data)
 To build from source:
 
 ```bash
-git clone https://github.com/manaschopra/go-polars
+git clone https://github.com/manas95826/go-polars
 cd go-polars
 pip install -e .
 ```
