@@ -20,8 +20,19 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 
 #line 3 "bridge.go"
- #include <stdlib.h>
- #include <stdint.h>
+
+#include <stdlib.h>
+#include <stdint.h>
+
+// Export these symbols without underscore prefix
+int64_t NewDataFrame(void);
+int AddSeries(int64_t handle, char* name, void* data, int length, int dtype);
+int GetShape(int64_t handle, int* rows, int* cols);
+void DeleteDataFrame(int64_t handle);
+int SortByColumn(int64_t handle, char* column, int ascending);
+int SortByIndex(int64_t handle, int ascending);
+int64_t GroupBy(int64_t handle, char** columns, int num_columns);
+int64_t Aggregate(int64_t handle, char* column, int agg_type);
 
 #line 1 "cgo-generated-wrapper"
 
@@ -83,6 +94,10 @@ extern int64_t NewDataFrame();
 extern int AddSeries(int64_t handle, char* name, void* data, int length, int dtype);
 extern int GetShape(int64_t handle, int* rows, int* cols);
 extern void DeleteDataFrame(int64_t handle);
+extern int SortByColumn(int64_t handle, char* column, int ascending);
+extern int SortByIndex(int64_t handle, int ascending);
+extern int64_t GroupBy(int64_t handle, char** columns, int numColumns);
+extern int64_t Aggregate(int64_t handle, char* column, int aggType);
 
 #ifdef __cplusplus
 }

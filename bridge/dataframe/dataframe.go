@@ -3,7 +3,7 @@ package dataframe
 import (
 	"fmt"
 
-	"bridge/types"
+	"go-polars/types"
 )
 
 // DataFrame represents a collection of Series with the same length

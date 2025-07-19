@@ -24,6 +24,11 @@ MANIFEST
 # Virtual Environment
 venv/
 ENV/
+.env
+.venv
+env/
+env.bak/
+venv.bak/
 
 # Go
 *.exe
@@ -34,12 +39,17 @@ ENV/
 *.test
 *.out
 go.work
+go.sum
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.swn
+.vim/
+*.sublime-workspace
+*.sublime-project
 
 # OS
 .DS_Store
@@ -52,5 +62,26 @@ Thumbs.db
 
 # Project specific
 ~/
-gopolars/_gopolars.c
-gopolars.h 
+go_polars/_go_polars.c
+go_polars/libgo_polars.h
+libgo_polars.h
+*.o
+*.a
+*.lib
+
+# Benchmark results
+benchmarks/*.csv
+benchmarks/*.png
+!benchmarks/README.md
+
+# Coverage reports
+coverage/
+.coverage
+coverage.xml
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+.temp/ 

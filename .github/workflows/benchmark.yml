@@ -1,0 +1,50 @@
+name: Benchmark
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install matplotlib pandas polars numpy go_polars psutil
+
+      - name: Run benchmark
+        run: |
+          python benchmark.py --csv results.csv --plot benchmark_plot.png
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: |
+            results.csv
+            benchmark_plot.png
+
+      - name: Comment PR with results table
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ### 🏃 Benchmarks
+            CSV and plot are attached as artifacts.
+            ```
+            $(cat results.csv)
+            ``` 
