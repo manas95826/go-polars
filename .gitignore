@@ -71,7 +71,6 @@ libgo_polars.h
 
 # Benchmark results
 benchmarks/*.csv
-benchmarks/*.png
 !benchmarks/README.md
 
 # Coverage reports
