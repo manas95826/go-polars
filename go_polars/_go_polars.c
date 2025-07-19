@@ -20,10 +20,14 @@ extern int64_t NewDataFrame(void);
 extern int AddSeries(int64_t handle, const char* name, void* data, int length, int dtype);
 extern int GetShape(int64_t handle, int* rows, int* cols);
 extern void DeleteDataFrame(int64_t handle);
-extern int SortByColumn(int64_t handle, const char* column, int ascending);
-extern int SortByIndex(int64_t handle, int ascending);
+extern int64_t SortByColumn(int64_t handle, const char* column, int ascending);
+extern int64_t SortByIndex(int64_t handle, int ascending);
 extern int64_t GroupBy(int64_t handle, const char** columns, int num_columns);
-extern int Aggregate(int64_t handle, const char* column, int agg_type);
+extern int64_t Aggregate(int64_t handle, const char* column, int agg_type);
+extern int64_t Head(int64_t handle, int n);
+extern void* GetSeries(int64_t handle, const char* name, int* length, int* dtype);
+extern char* GetColumn(int64_t handle, int index);
+extern int GetColumnCount(int64_t handle);
 
 typedef struct {
     PyObject_HEAD
@@ -178,13 +182,18 @@ DataFrame_sort_by_column(DataFrameObject *self, PyObject *args)
         return NULL;
     }
 
-    int result = SortByColumn(self->handle, column, ascending);
-    if (result != 0) {
+    int64_t new_handle = SortByColumn(self->handle, column, ascending);
+    if (new_handle == -1) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to sort DataFrame");
         return NULL;
     }
 
-    Py_RETURN_NONE;
+    DataFrameObject *sorted = (DataFrameObject*)PyType_GenericNew(&DataFrameType, NULL, NULL);
+    if (!sorted) {
+        return NULL;
+    }
+    sorted->handle = new_handle;
+    return (PyObject*)sorted;
 }
 
 static PyObject *
@@ -196,13 +205,18 @@ DataFrame_sort_by_index(DataFrameObject *self, PyObject *args)
         return NULL;
     }
 
-    int result = SortByIndex(self->handle, ascending);
-    if (result != 0) {
+    int64_t new_handle = SortByIndex(self->handle, ascending);
+    if (new_handle == -1) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to sort DataFrame");
         return NULL;
     }
 
-    Py_RETURN_NONE;
+    DataFrameObject *sorted = (DataFrameObject*)PyType_GenericNew(&DataFrameType, NULL, NULL);
+    if (!sorted) {
+        return NULL;
+    }
+    sorted->handle = new_handle;
+    return (PyObject*)sorted;
 }
 
 static PyObject *
@@ -248,9 +262,103 @@ DataFrame_group_by(DataFrameObject *self, PyObject *args)
     if (!grouped) {
         return NULL;
     }
-    grouped->handle = grouped_handle;
 
+    grouped->handle = grouped_handle;
     return (PyObject*)grouped;
+}
+
+static PyObject *
+DataFrame_head(DataFrameObject *self, PyObject *args)
+{
+    int n = 5;  // default to 5 rows
+    
+    if (!PyArg_ParseTuple(args, "|i", &n)) {
+        return NULL;
+    }
+
+    int64_t head_handle = Head(self->handle, n);
+    if (head_handle == -1) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to get head of DataFrame");
+        return NULL;
+    }
+
+    DataFrameObject *head = (DataFrameObject*)PyType_GenericNew(&DataFrameType, NULL, NULL);
+    if (!head) {
+        return NULL;
+    }
+
+    head->handle = head_handle;
+    return (PyObject*)head;
+}
+
+static PyObject *
+DataFrame_get_column_count(DataFrameObject *self, PyObject *Py_UNUSED(ignored))
+{
+    int count = GetColumnCount(self->handle);
+    if (count == -1) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to get column count");
+        return NULL;
+    }
+    return PyLong_FromLong(count);
+}
+
+static PyObject *
+DataFrame_get_column(DataFrameObject *self, PyObject *args)
+{
+    int index;
+    if (!PyArg_ParseTuple(args, "i", &index)) {
+        return NULL;
+    }
+
+    char *col = GetColumn(self->handle, index);
+    if (col == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to get column name");
+        return NULL;
+    }
+
+    PyObject *result = PyUnicode_FromString(col);
+    free(col);  // Free the C string
+    return result;
+}
+
+static PyObject *
+DataFrame_get_series(DataFrameObject *self, PyObject *args)
+{
+    const char *name;
+    if (!PyArg_ParseTuple(args, "s", &name)) {
+        return NULL;
+    }
+
+    int length, dtype;
+    void *data = GetSeries(self->handle, name, &length, &dtype);
+    if (data == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to get series");
+        return NULL;
+    }
+
+    npy_intp dims[1] = {length};
+    int np_type;
+    switch (dtype) {
+        case 0:  // int64
+            np_type = NPY_INT64;
+            break;
+        case 1:  // float64
+            np_type = NPY_FLOAT64;
+            break;
+        case 2:  // bool
+            np_type = NPY_BOOL;
+            break;
+        default:
+            PyErr_SetString(PyExc_RuntimeError, "Unknown dtype");
+            return NULL;
+    }
+
+    PyObject *array = PyArray_SimpleNewFromData(1, dims, np_type, data);
+    if (array == NULL) {
+        return NULL;
+    }
+
+    return array;
 }
 
 static void
@@ -304,16 +412,24 @@ static PyTypeObject GroupedDataFrameType = {
 };
 
 static PyMethodDef DataFrame_methods[] = {
-    {"add_series", (PyCFunction) DataFrame_add_series, METH_VARARGS,
+    {"add_series", (PyCFunction)DataFrame_add_series, METH_VARARGS,
      "Add a series to the DataFrame"},
-    {"shape", (PyCFunction) DataFrame_shape, METH_NOARGS,
+    {"shape", (PyCFunction)DataFrame_shape, METH_NOARGS,
      "Get the shape of the DataFrame"},
-    {"sort_by_column", (PyCFunction) DataFrame_sort_by_column, METH_VARARGS,
-     "Sort DataFrame by column"},
-    {"sort_by_index", (PyCFunction) DataFrame_sort_by_index, METH_VARARGS,
-     "Sort DataFrame by index"},
-    {"group_by", (PyCFunction) DataFrame_group_by, METH_VARARGS,
-     "Group DataFrame by columns"},
+    {"sort_by_column", (PyCFunction)DataFrame_sort_by_column, METH_VARARGS,
+     "Sort the DataFrame by a column"},
+    {"sort_by_index", (PyCFunction)DataFrame_sort_by_index, METH_VARARGS,
+     "Sort the DataFrame by index"},
+    {"group_by", (PyCFunction)DataFrame_group_by, METH_VARARGS,
+     "Group the DataFrame by columns"},
+    {"head", (PyCFunction)DataFrame_head, METH_VARARGS,
+     "Get the first n rows of the DataFrame"},
+    {"get_column_count", (PyCFunction)DataFrame_get_column_count, METH_NOARGS,
+     "Get the number of columns in the DataFrame"},
+    {"get_column", (PyCFunction)DataFrame_get_column, METH_VARARGS,
+     "Get the name of a column by index"},
+    {"get_series", (PyCFunction)DataFrame_get_series, METH_VARARGS,
+     "Get a series from the DataFrame"},
     {NULL}  /* Sentinel */
 };
 

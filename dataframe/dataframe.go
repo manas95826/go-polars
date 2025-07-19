@@ -221,22 +221,38 @@ func (df *DataFrame) SortByColumn(column string, ascending bool) (*DataFrame, er
 		return nil, fmt.Errorf("unsupported data type for column %s", column)
 	}
 
-	// Permute each column in place using indices
-	for _, s := range df.series {
+	// Create new sorted series
+	sorted := make(map[string]*types.Series)
+	for name, s := range df.series {
 		switch data := s.Data.(type) {
 		case []int64:
-			inPlacePermuteInt64(data, indices)
+			newData := make([]int64, df.length)
+			for newIdx, oldIdx := range indices {
+				newData[newIdx] = data[oldIdx]
+			}
+			sorted[name] = types.NewSeries(name, newData)
 		case []float64:
-			inPlacePermuteFloat64(data, indices)
+			newData := make([]float64, df.length)
+			for newIdx, oldIdx := range indices {
+				newData[newIdx] = data[oldIdx]
+			}
+			sorted[name] = types.NewSeries(name, newData)
 		case []string:
-			inPlacePermuteString(data, indices)
+			newData := make([]string, df.length)
+			for newIdx, oldIdx := range indices {
+				newData[newIdx] = data[oldIdx]
+			}
+			sorted[name] = types.NewSeries(name, newData)
 		case []bool:
-			inPlacePermuteBool(data, indices)
+			newData := make([]bool, df.length)
+			for newIdx, oldIdx := range indices {
+				newData[newIdx] = data[oldIdx]
+			}
+			sorted[name] = types.NewSeries(name, newData)
 		}
 	}
 
-	// Return the same DataFrame (mutated) to keep API unchanged.
-	return df, nil
+	return New(sorted)
 }
 
 // SortByIndex sorts the DataFrame by the row index
